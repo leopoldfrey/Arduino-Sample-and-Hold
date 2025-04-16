@@ -16,33 +16,6 @@ float fastExp2(float x) {
   return exp(x * log2);
 }
 
-/*
-int32_t intSqrt(int32_t n) {
-    int32_t guess = n / 2;  // Commencer par une approximation grossière
-    int32_t result = 0;
-
-    if (n < 0) return -1;  // Retourner -1 pour les valeurs négatives (erreur)
-  
-    while (guess != result) {
-        result = guess;
-        guess = (guess + n / guess) / 2;  // Newton's method
-    }
-
-    return guess;
-}*/
-
-unsigned long inoise16(unsigned long x, unsigned long y, unsigned int z) {
-  // Utilisation d'une méthode de bruit 3D avec des transformations et un mélange
-  x = (x << 13) ^ x;
-  y = (y << 13) ^ y;
-  z = (z << 13) ^ z;
-
-  unsigned long long hash = (x + y * 57 + z * 131) & 0xFFFFFFFF;
-
-  hash = (hash * (hash * hash * 15731 + 789221) + 1376312589) & 0x7fffffff;
-  return (unsigned short)(hash >> 16);  // Retourner un bruit sur 16 bits
-}
-
 struct RGen {  // Implémentation de RGen
   uint32_t s1, s2, s3;
   void init(uint32_t seed) {
@@ -134,10 +107,10 @@ void checkLongPress() {
       //Serial.println(F("Just released"));
       lastCountTime = millis();
     }
-    if (algoChoose && (millis() - lastCountTime > 2 * HOLDTIME)) {
-      blinkLED(algo);
+    if (algoChoose && (millis() - lastCountTime > HOLDTIME)) {
       algoChoose = false;
       algo = (algoCount - 1 + MAX_ALGO) % MAX_ALGO;
+      blinkLED(algo+1);
 #if DEBUG
       Serial.print(F("ALGOCHOOSE OFF "));
       Serial.println(algo);

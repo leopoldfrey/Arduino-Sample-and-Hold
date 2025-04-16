@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #ifndef ALGOS_H
 #define ALGOS_H
 
@@ -14,6 +15,7 @@ void handleSampleAndHold() {
 }
 
 /********* ALGO PERLIN NOISE ********/
+// Based on PerlinNoise.ino @author Adam Wonak (https://github.com/awonak/HagiwoModulove/blob/main/SyncLFO/PerlinNoise/PerlinNoise.ino)
 // Génère des valeurs basées sur le bruit de Perlin
 // Exponential curve factors for frequency and noise buffer.
 void handlePerlinNoise() {
@@ -33,14 +35,14 @@ void handlePerlinNoise() {
     // Calcul de la fréquence
     if (isTriggered()) {
       if (extOrInt) {
-        perlin_freq = sqrt(maxPot / 1024.f * (float)(inp / 1024.f)) * 450 + 100;
+        perlin_freq = sqrt(maxPot / 1024.f * (float)(inp / 1024.f)) * 500 + 1;
       } else {
-        perlin_freq = sqrt(maxPot / 1024.f) * 450 + 100;
+        perlin_freq = sqrt(maxPot / 1024.f) * 500 + 1;
       }
     }
 
     // Mise à jour des coordonnées Perlin
-    perlin_nx += fastExp2(perlin_freq / 32);
+    perlin_nx += pow(2, perlin_freq / 32);
     perlin_val = inoise16(perlin_nx, ++perlin_ny, perlin_seed) >> 6;  // 16bit noise > 10bit value
 
     // Application de l'offset
@@ -79,37 +81,6 @@ void handleBrownianMotion() {
   sample = constrain((int)brownian_value + brownian_offset, 0, 1023);
 }
 
-void handleBrownianMotionINT() {
-  static int32_t brownian_value = 512000;  // Valeur *1000
-  static int32_t brownian_step = 10000;
-  static int32_t brownian_delta = 0;
-  static int brownian_offset = 0;
-
-  if (isTriggered()) {
-    int32_t norm_inp = extOrInt 
-                        ? ((int32_t)maxPot * (int32_t)inp * 1000) / (1024 * 1024L)
-                        : ((int32_t)maxPot * 1000) / 1024;
-
-    int32_t power = (norm_inp * norm_inp) / 1000;  // car *1000²
-    brownian_step = power * 50 + 100;              // *1000, donc +0.1f = +100
-  }
-
-  brownian_delta = ((rgen.trand() % 201) - 100) * brownian_step / 100;
-
-  brownian_offset = map(minPot, 0, 1023, -512, 512);
-
-  int32_t tentative = brownian_value + brownian_delta + brownian_offset * 1000;
-
-  if (tentative < 0 || tentative > 1023000) {
-    brownian_delta = -brownian_delta;
-  }
-
-  brownian_value += brownian_delta;
-
-  sample = constrain((brownian_value + brownian_offset * 1000) / 1000, 0, 1023);
-}
-
-
 /********** ALGO LORENZ ********/
 // Génère des valeurs basées sur l'attracteur de Lorenz
 void handleLorenzAttractor() {
@@ -141,11 +112,12 @@ void handleLorenzAttractor() {
 }
 
 /********** ALGO DUST ********/
+// Based on SuperCollider for max sc.dust2~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.dust2_tilde/sc.dust2_tilde.cpp)
 // Génère des impulsions aléatoires basées sur la densité
 float generate_dust(float density) {
   // Calcul des paramètres
   float thresh = density + 0.0001f;  // Seuil basé sur la densité
-  float scale = 1.f / thresh;       // Échelle
+  float scale = 1.f / thresh;        // Échelle
 
   // Générer un nombre aléatoire
   float z = rgen.frand();
@@ -170,39 +142,6 @@ void handleDust() {
   sample = constrain((int)(generate_dust(dust_density) * dust_scale), 0, 1023);
 }
 
-int32_t generate_dustINT(int32_t density) {
-  // Calcul des paramètres (conversion en entiers)
-  int32_t thresh = density + 1;  // Seuil basé sur la densité (ajusté pour éviter la valeur 0)
-  int32_t scale = 1024 / thresh;  // Échelle (utilisation d'entiers)
-
-  // Générer un nombre aléatoire avec rgen.trand() et le limiter à la plage [0, 1023]
-  int32_t z = rgen.trand() % 1024;  // Limiter la valeur à la plage [0, 1023]
-
-  // Appliquer la logique de seuil et de mise à l'échelle
-  if (z < thresh) {
-    return (z * scale) / 1024;  // Retourner la valeur mise à l'échelle
-  } else {
-    return 0;  // Si pas dans le seuil, retourner 0
-  }
-}
-void handleDustINT() {
-  static int32_t dust_density = 512;  // Densité sous forme d'entier (valeur entre 0 et 1023)
-  static int32_t dust_scale = 1024;   // Échelle de la poussière
-
-  if (isTriggered()) {
-    dust_density = extOrInt
-                     ? (int32_t)(fastPow5((float)maxPot * (float)inp / (1024L * 1024)) * 1024)
-                     : (int32_t)(fastPow5((float)maxPot / 1024) * 1024);
-  }
-
-  dust_scale = minPot;  // minPot = offset (utilisation de minPot comme échelle)
-
-  // Utilisation de generate_dust et application de l'échelle
-  int32_t dust_value = generate_dustINT(dust_density);
-  sample = constrain(dust_value * dust_scale, 0, 1023);  // Calcul de l'échantillon
-}
-
-
 /*********** ALGO FLIP_NOISE *******/
 // Génère un bruit blanc avec un seuil de basculement
 void handleFlipNoise() {
@@ -222,27 +161,6 @@ void handleFlipNoise() {
   }
 }
 
-void handleFlipNoiseINT() {
-  static int32_t flip_thres = 0;  // Seuil
-  static int32_t flip_amp = 0;    // Amplitude
-  static int32_t flip_input = 0;  // Entrée
-  static bool flip_prev = LOW;    // Précedent
-
-  if (isTriggered()) {
-    flip_amp = extOrInt ? (int32_t)(minPot * inp) / 1024 : minPot;
-  }
-
-  flip_input = random(0, 1024);  // Valeur aléatoire entre 0 et 1023 (plage correcte)
-  // Calcul du seuil, on évite l'utilisation de float
-  flip_thres = (int32_t)(fastPow5(maxPot / 1024) * 1024) + 1;  // Seuil calculé en entier
-  
-  if (flip_input < flip_thres) {
-    flip_prev = !flip_prev;
-    sample = flip_prev ? flip_amp : 0;  // Si seuil atteint, changer l'état et appliquer l'amplitude
-  }
-}
-
-
 /*********** ALG06 RAND_GATE *******/
 void handleRandGate() {
   if (trigStage == NEW) {
@@ -260,25 +178,23 @@ enum Stage {
   WAIT,   // WAITING FOR TRIG
 };
 void handleGateDelay() {
-  static Stage gateStage = WAIT;  // Stage
+  static Stage gateStage = WAIT;           // Stage
   static unsigned long gateDelayStart;     // Temps de début du délai
   static unsigned long gateDelay = 1000;   // Temps de délai
   static unsigned long gateLength = 1000;  // Temps du gate
-  static unsigned long gateCurrentTime;
 
-  gateCurrentTime = millis();
   switch (gateStage) {
     case WAIT:
       if (trigStage == NEW) {
-        gateDelay = extOrInt ? (unsigned long)((fastPow2((float)maxPot / 1024.) + fastPow2((float)inp / 1024.)) * 1000.) : (unsigned long)(fastPow2((float)maxPot / 1024.) * 1000.);
+        gateDelay = (unsigned long)((extOrInt ? fastPow2((float)maxPot / 1024.) + fastPow2((float)inp / 1024.) : fastPow2((float)maxPot / 1024.)) * 2000.);
         gateLength = (unsigned long)(pow((float)minPot / 1024., 1.25) * 2000.) + MINGATE;
-        gateDelayStart = gateCurrentTime;
+        gateDelayStart = millis();
         gateStage = DELAY;
       }
       sample = 0;
       break;
     case DELAY:
-      if (gateCurrentTime - gateDelayStart >= gateDelay) {  // END OF DELAY
+      if (millis() - gateDelayStart >= gateDelay) {  // END OF DELAY
         gateStage = GATE;
         sample = 1023;
       } else {
@@ -286,7 +202,7 @@ void handleGateDelay() {
       }
       break;
     case GATE:
-      if (gateCurrentTime - gateDelayStart >= gateDelay + gateLength) {  // END OF GATE
+      if (millis() - gateDelayStart >= gateDelay + gateLength) {  // END OF GATE
         gateStage = WAIT;
         sample = 0;
       } else {
@@ -331,7 +247,7 @@ void handleLoopRecorder() {
   cvRecStepDuration = map(maxPot, 0, 1023, 100, 10);
   if (trigStage == NEW || trigStage == OLD) {
     if (trigStage == NEW) {
-      recordedSize = 1;  // Réinitialise la taille enregistrée
+      recordedSize = 0;  // Réinitialise la taille enregistrée
       isRecording = true;
     }
     if (millis() - cvRecLastStep > cvRecStepDuration) {
@@ -341,8 +257,6 @@ void handleLoopRecorder() {
       recordedSize = (recordedSize + 1) % loopBufferSize;  // Incrémente avec wrap-around
       cvRecLastStep = millis();
     }
-
-
   } else {
     // Si on était en mode enregistrement, passer en mode lecture
     if (isRecording) {
@@ -395,10 +309,10 @@ void handleBurst() {
   static unsigned long stepDuration = 0;
   static byte stepCount = 0;
   static byte tapMult = 1;
-  static const byte mult_options[8] = { 2, 3, 4, 5, 6, 8, 10, 12 };
+  static const byte mult_options[10] = { 1, 2, 3, 4, 5, 6, 8, 10, 12, 16 };
 
   tapCurrentTime = millis();
-  tapMult = map(maxPot, 0, 1023, 0, 7);  // Multiplier
+  tapMult = extOrInt ? (map(maxPot, 0, 1023, 0, 9) + map(inp, 0, 1023, 0, 9)) % 10 : map(maxPot, 0, 1023, 0, 9);  // Multiplier
   if (trigStage == NEW) {
     tapTempo.update(true);
     tapLastBeat = millis();
@@ -406,7 +320,7 @@ void handleBurst() {
     tapTempo.update(false);
   }
   tapDuration = tapTempo.getBeatLength();
-  stepDuration = (int)(tapDuration / (float)mult_options[tapMult]);
+  stepDuration = shth ? (int)(tapDuration / (float)mult_options[tapMult]) : (int)(tapDuration * (float)mult_options[tapMult]);
   /*if (tapTempo.onBeat()) {
     tapLastBeat = millis();
     sample = extOrInt ? inp : 1023;
@@ -415,15 +329,34 @@ void handleBurst() {
   } else */
   if (millis() - tapLastBeat >= stepDuration) {
     tapLastBeat = millis();
-    sample = extOrInt ? inp : 1023;
+    sample = 1023;
     stepCount++;
-    digitalWrite(ledPin, HIGH);
-  } else if (millis() - tapLastBeat <= MINGATE + minPot / 4) {
-    sample = extOrInt ? inp : 1023;
-    digitalWrite(ledPin, HIGH);
+    //digitalWrite(ledPin, HIGH);
+  } else if (millis() - tapLastBeat <= (minPot / 1024. * stepDuration)) {
+    sample = 1023;
+    //digitalWrite(ledPin, HIGH);
   } else {
     sample = 0;
-    digitalWrite(ledPin, LOW);
+    //digitalWrite(ledPin, LOW);
+  }
+}
+
+/*********** ALGO CRACKLE *******/
+// Based on SuperCollider for max sc.crackle~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.crackle_tilde/sc.crackle_tilde.cpp)
+void handleCrackle() {
+  static float crackle_density = 0;
+  static float crackle_scale = 0;
+  static float crackle_y0 = 0;
+  static float crackle_y1 = 0;
+  static float crackle_y2 = 0;
+
+  if (isTriggered()) {
+    crackle_density = (extOrInt ? pow(maxPot / 1024.0 * (float)(inp / 1024.f), 0.75) : pow(maxPot / 1024.0, 0.75)) * 1.5f + 0.5f;  // densité
+    crackle_scale = minPot;                                                                                                        // offset
+    crackle_y0 = fabs(crackle_y1 * crackle_density - crackle_y2 - 0.05f);
+    crackle_y2 = crackle_y1;
+    crackle_y1 = crackle_y0;
+    sample = constrain(crackle_y0 * crackle_scale * 2.f, 0, 1024);
   }
 }
 

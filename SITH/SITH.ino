@@ -1,9 +1,11 @@
 #include <EEPROM.h>
+#include <FastLED.h>
+
 //#define DEBUG 1
 
-const byte MAX_ALGO = 13;
-const unsigned long HOLDTIME = 1000;
-const unsigned long BLINK = 200;
+const byte MAX_ALGO = 14;
+const unsigned long HOLDTIME = 2000;
+const unsigned long BLINK = 150;
 const unsigned long MINGATE = 20;
 
 /********** PIN NUMBERS **********/
@@ -45,7 +47,7 @@ TrigStage trigStage = OFF;
 TrigStage prevStage = OFF;
 
 #define ALGO_SHTH 0
-#define ALGO_PERLIN 1  // Based on PerlinNoise.ino @author Adam Wonak (https://github.com/awonak/)
+#define ALGO_PERLIN 1  // Based on PerlinNoise.ino @author Adam Wonak (https://github.com/awonak/HagiwoModulove/blob/main/SyncLFO/PerlinNoise/PerlinNoise.ino)
 #define ALGO_BROWNIAN 2
 #define ALGO_LORENZ 3
 #define ALGO_DUST 4  // Based on SuperCollider for max sc.dust2~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.dust2_tilde/sc.dust2_tilde.cpp)
@@ -57,8 +59,7 @@ TrigStage prevStage = OFF;
 #define ALGO_CVRECORDER 10
 #define ALGO_TURING 11
 #define ALGO_BURST 12
-// TODO ALGO GATE > TRIG & TRIG > GATE
-// TODO FIXED VOLTAGES ???
+#define ALGO_CRACKLE 13  // Based on SuperCollider for max sc.crackle~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.crackle_tilde/sc.crackle_tilde.cpp)
 
 #include "utils.h"
 #include "algos.h"
@@ -112,17 +113,18 @@ void loop() {
   inp = analogRead(signalInput);
   shth = digitalRead(SHTHpin) == LOW;
   trig = digitalRead(trigIn) == LOW;
-  if (!isBlinking)
-    digitalWrite(ledPin, trig ? HIGH : LOW);
-
   if (isTriggered()) {
     switch (trigStage) {
       case OFF:
         trigStage = NEW;
         break;
       case NEW:
-      case OLD:
+        if (!isBlinking)
+          digitalWrite(ledPin, HIGH);
         trigStage = OLD;
+      case OLD:
+        if (!isBlinking)
+          digitalWrite(ledPin, LOW);
         break;
     }
   } else {
@@ -138,16 +140,16 @@ void loop() {
         handlePerlinNoise();
         break;
       case ALGO_BROWNIAN:
-        handleBrownianMotionINT();
+        handleBrownianMotion();
         break;
       case ALGO_LORENZ:
         handleLorenzAttractor();
         break;
       case ALGO_DUST:
-        handleDustINT();
+        handleDust();
         break;
       case ALGO_FLIPNOISE:
-        handleFlipNoiseINT();
+        handleFlipNoise();
         break;
       case ALGO_RANDGATE:
         handleRandGate();
@@ -170,11 +172,15 @@ void loop() {
       case ALGO_BURST:
         handleBurst();
         break;
+      case ALGO_CRACKLE:
+        handleCrackle();
+        break;
     }
 
-    if (isTriggered() || algo == ALGO_CVRECORDER || algo == ALGO_BURST) {
+    if (isTriggered() || algo == ALGO_CVRECORDER || algo == ALGO_BURST || algo == ALGO_GATEDELAY) {
       PORTD = lowByte(sample);
       PORTB = highByte(sample);
+      digitalWrite(ledPin, sample > 512);
 #if DEBUG
       snprintf(buffer, sizeof(buffer), "%d %d", algo, sample);
       Serial.println(buffer);
@@ -182,6 +188,7 @@ void loop() {
     } else if (algo == ALGO_RANDGATE || algo == ALGO_RYTHMQUANT) {
       PORTD = 0;
       PORTB = 0;
+      digitalWrite(ledPin, LOW);
     }
     prevSample = sample;
     prevTrig = trig;
