@@ -25,7 +25,7 @@ void handlePerlinNoise() {
   static unsigned long perlin_frequencyInterval = 10;  // << 4;    // Frequency timer (increase for slower rate)
   static unsigned long perlin_currentTime = 0;
   static unsigned long perlin_previousTime = 0;  // Store last time Frequency was updated
-  static double perlin_freq = 0;
+  static float perlin_freq = 0;
   perlin_offset = map(minPot, 0, 1024, -511, 512);  // minPot = offset
   perlin_currentTime = micros();
 
@@ -79,6 +79,37 @@ void handleBrownianMotion() {
   sample = constrain((int)brownian_value + brownian_offset, 0, 1023);
 }
 
+void handleBrownianMotionINT() {
+  static int32_t brownian_value = 512000;  // Valeur *1000
+  static int32_t brownian_step = 10000;
+  static int32_t brownian_delta = 0;
+  static int brownian_offset = 0;
+
+  if (isTriggered()) {
+    int32_t norm_inp = extOrInt 
+                        ? ((int32_t)maxPot * (int32_t)inp * 1000) / (1024 * 1024L)
+                        : ((int32_t)maxPot * 1000) / 1024;
+
+    int32_t power = (norm_inp * norm_inp) / 1000;  // car *1000²
+    brownian_step = power * 50 + 100;              // *1000, donc +0.1f = +100
+  }
+
+  brownian_delta = ((rgen.trand() % 201) - 100) * brownian_step / 100;
+
+  brownian_offset = map(minPot, 0, 1023, -512, 512);
+
+  int32_t tentative = brownian_value + brownian_delta + brownian_offset * 1000;
+
+  if (tentative < 0 || tentative > 1023000) {
+    brownian_delta = -brownian_delta;
+  }
+
+  brownian_value += brownian_delta;
+
+  sample = constrain((brownian_value + brownian_offset * 1000) / 1000, 0, 1023);
+}
+
+
 /********** ALGO LORENZ ********/
 // Génère des valeurs basées sur l'attracteur de Lorenz
 void handleLorenzAttractor() {
@@ -111,10 +142,10 @@ void handleLorenzAttractor() {
 
 /********** ALGO DUST ********/
 // Génère des impulsions aléatoires basées sur la densité
-float generate_dust(double density) {
+float generate_dust(float density) {
   // Calcul des paramètres
-  double thresh = density + 0.0001;  // Seuil basé sur la densité
-  double scale = 1.f / thresh;       // Échelle
+  float thresh = density + 0.0001f;  // Seuil basé sur la densité
+  float scale = 1.f / thresh;       // Échelle
 
   // Générer un nombre aléatoire
   float z = rgen.frand();
@@ -127,8 +158,8 @@ float generate_dust(double density) {
   }
 }
 void handleDust() {
-  static double dust_density = 0.5;
-  static double dust_scale = 1024;
+  static float dust_density = 0.5;
+  static int dust_scale = 1024;
 
   if (isTriggered()) {
     dust_density = extOrInt
@@ -138,6 +169,39 @@ void handleDust() {
   dust_scale = minPot;  // minPot = offset
   sample = constrain((int)(generate_dust(dust_density) * dust_scale), 0, 1023);
 }
+
+int32_t generate_dustINT(int32_t density) {
+  // Calcul des paramètres (conversion en entiers)
+  int32_t thresh = density + 1;  // Seuil basé sur la densité (ajusté pour éviter la valeur 0)
+  int32_t scale = 1024 / thresh;  // Échelle (utilisation d'entiers)
+
+  // Générer un nombre aléatoire avec rgen.trand() et le limiter à la plage [0, 1023]
+  int32_t z = rgen.trand() % 1024;  // Limiter la valeur à la plage [0, 1023]
+
+  // Appliquer la logique de seuil et de mise à l'échelle
+  if (z < thresh) {
+    return (z * scale) / 1024;  // Retourner la valeur mise à l'échelle
+  } else {
+    return 0;  // Si pas dans le seuil, retourner 0
+  }
+}
+void handleDustINT() {
+  static int32_t dust_density = 512;  // Densité sous forme d'entier (valeur entre 0 et 1023)
+  static int32_t dust_scale = 1024;   // Échelle de la poussière
+
+  if (isTriggered()) {
+    dust_density = extOrInt
+                     ? (int32_t)(fastPow5((float)maxPot * (float)inp / (1024L * 1024)) * 1024)
+                     : (int32_t)(fastPow5((float)maxPot / 1024) * 1024);
+  }
+
+  dust_scale = minPot;  // minPot = offset (utilisation de minPot comme échelle)
+
+  // Utilisation de generate_dust et application de l'échelle
+  int32_t dust_value = generate_dustINT(dust_density);
+  sample = constrain(dust_value * dust_scale, 0, 1023);  // Calcul de l'échantillon
+}
+
 
 /*********** ALGO FLIP_NOISE *******/
 // Génère un bruit blanc avec un seuil de basculement
@@ -157,6 +221,27 @@ void handleFlipNoise() {
     sample = flip_prev ? flip_amp : 0;
   }
 }
+
+void handleFlipNoiseINT() {
+  static int32_t flip_thres = 0;  // Seuil
+  static int32_t flip_amp = 0;    // Amplitude
+  static int32_t flip_input = 0;  // Entrée
+  static bool flip_prev = LOW;    // Précedent
+
+  if (isTriggered()) {
+    flip_amp = extOrInt ? (int32_t)(minPot * inp) / 1024 : minPot;
+  }
+
+  flip_input = random(0, 1024);  // Valeur aléatoire entre 0 et 1023 (plage correcte)
+  // Calcul du seuil, on évite l'utilisation de float
+  flip_thres = (int32_t)(fastPow5(maxPot / 1024) * 1024) + 1;  // Seuil calculé en entier
+  
+  if (flip_input < flip_thres) {
+    flip_prev = !flip_prev;
+    sample = flip_prev ? flip_amp : 0;  // Si seuil atteint, changer l'état et appliquer l'amplitude
+  }
+}
+
 
 /*********** ALG06 RAND_GATE *******/
 void handleRandGate() {
@@ -234,7 +319,7 @@ void handleQuantizer() {
 }
 
 /*********** ALGO CVRECORDER *******/
-static const int loopBufferSize = 512;  // Taille ajustée pour le buffer
+static const int loopBufferSize = 600;  // Taille ajustée pour le buffer
 static int loopBuffer[loopBufferSize];  // Buffer pour stocker les échantillons
 void handleLoopRecorder() {
   static unsigned long cvRecStepDuration = 100;

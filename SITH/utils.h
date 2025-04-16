@@ -15,6 +15,22 @@ float fastExp2(float x) {
   const float log2 = log(2);
   return exp(x * log2);
 }
+
+/*
+int32_t intSqrt(int32_t n) {
+    int32_t guess = n / 2;  // Commencer par une approximation grossière
+    int32_t result = 0;
+
+    if (n < 0) return -1;  // Retourner -1 pour les valeurs négatives (erreur)
+  
+    while (guess != result) {
+        result = guess;
+        guess = (guess + n / guess) / 2;  // Newton's method
+    }
+
+    return guess;
+}*/
+
 unsigned long inoise16(unsigned long x, unsigned long y, unsigned int z) {
   // Utilisation d'une méthode de bruit 3D avec des transformations et un mélange
   x = (x << 13) ^ x;

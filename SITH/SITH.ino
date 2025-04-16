@@ -138,16 +138,16 @@ void loop() {
         handlePerlinNoise();
         break;
       case ALGO_BROWNIAN:
-        handleBrownianMotion();
+        handleBrownianMotionINT();
         break;
       case ALGO_LORENZ:
         handleLorenzAttractor();
         break;
       case ALGO_DUST:
-        handleDust();
+        handleDustINT();
         break;
       case ALGO_FLIPNOISE:
-        handleFlipNoise();
+        handleFlipNoiseINT();
         break;
       case ALGO_RANDGATE:
         handleRandGate();
