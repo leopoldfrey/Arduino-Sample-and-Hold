@@ -1,9 +1,9 @@
 #include <EEPROM.h>
 #include <FastLED.h>
 
-//#define DEBUG 1
+#define DEBUG 1
 
-const byte MAX_ALGO = 14;
+const byte MAX_ALGO = 15;
 const unsigned long HOLDTIME = 2000;
 const unsigned long BLINK = 150;
 const unsigned long MINGATE = 20;
@@ -60,6 +60,7 @@ TrigStage prevStage = OFF;
 #define ALGO_TURING 11
 #define ALGO_BURST 12
 #define ALGO_CRACKLE 13  // Based on SuperCollider for max sc.crackle~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.crackle_tilde/sc.crackle_tilde.cpp)
+#define ALGO_CALIB 14
 
 #include "utils.h"
 #include "algos.h"
@@ -174,6 +175,9 @@ void loop() {
         break;
       case ALGO_CRACKLE:
         handleCrackle();
+        break;
+      case ALGO_CALIB:
+        handleCalib();
         break;
     }
 

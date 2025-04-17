@@ -189,9 +189,16 @@ void handleGateDelay() {
         gateDelay = (unsigned long)((extOrInt ? fastPow2((float)maxPot / 1024.) + fastPow2((float)inp / 1024.) : fastPow2((float)maxPot / 1024.)) * 2000.);
         gateLength = (unsigned long)(pow((float)minPot / 1024., 1.25) * 2000.) + MINGATE;
         gateDelayStart = millis();
-        gateStage = DELAY;
+        if (gateDelay > 0) {
+          gateStage = DELAY;
+          sample = 0;
+        } else {  // SWITCH TO GATE IMMEDIATLY
+          gateStage = GATE;
+          sample = 1023;
+        }
+      } else {
+        sample = 0;
       }
-      sample = 0;
       break;
     case DELAY:
       if (millis() - gateDelayStart >= gateDelay) {  // END OF DELAY
@@ -357,6 +364,21 @@ void handleCrackle() {
     crackle_y2 = crackle_y1;
     crackle_y1 = crackle_y0;
     sample = constrain(crackle_y0 * crackle_scale * 2.f, 0, 1024);
+  }
+}
+
+/************ ALGO CALIB ******************/
+#include "calibration.h"
+void handleCalib() {
+  int octaV = map(minPot, 0, 1023, 0, 4);
+  //int semiV = map(maxPot, 0, 1023, -12, 12); //range -1oct / +1oct
+  int semiV = map(maxPot, 0, 1023, -7, 7); //range -7semioct / +7semi
+  //int semiV = map(maxPot, 0, 1023, 0, 12); //range +1oct
+  int octa1 = octave[octaV];
+  int octa2 = octave[octaV+1];
+  int sum = (int)(octa1 + semiV * (octa2 - octa1) / 12.);
+  if (isTriggered()) {
+    sample = extOrInt ? constrain(inp + sum, 0, 1023) : constrain(sum, 0, 1023);
   }
 }
 
