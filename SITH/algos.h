@@ -371,8 +371,8 @@ void handleCrackle() {
 #include "calibration.h"
 void handleCalib() {
   int octaV = map(minPot, 0, 1023, 0, 4);
-  //int semiV = map(maxPot, 0, 1023, -12, 12); //range -1oct / +1oct
-  int semiV = map(maxPot, 0, 1023, -7, 7); //range -7semioct / +7semi
+  int semiV = map(maxPot, 0, 1023, -12, 12); //range -1oct / +1oct
+  //int semiV = map(maxPot, 0, 1023, -7, 7); //range -7semioct / +7semi
   //int semiV = map(maxPot, 0, 1023, 0, 12); //range +1oct
   int octa1 = octave[octaV];
   int octa2 = octave[octaV+1];

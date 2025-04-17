@@ -1,7 +1,7 @@
 #include <EEPROM.h>
 #include <FastLED.h>
 
-#define DEBUG 1
+//#define DEBUG 1
 
 const byte MAX_ALGO = 15;
 const unsigned long HOLDTIME = 2000;
@@ -46,21 +46,21 @@ enum TrigStage {
 TrigStage trigStage = OFF;
 TrigStage prevStage = OFF;
 
-#define ALGO_SHTH 0
-#define ALGO_PERLIN 1  // Based on PerlinNoise.ino @author Adam Wonak (https://github.com/awonak/HagiwoModulove/blob/main/SyncLFO/PerlinNoise/PerlinNoise.ino)
-#define ALGO_BROWNIAN 2
-#define ALGO_LORENZ 3
-#define ALGO_DUST 4  // Based on SuperCollider for max sc.dust2~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.dust2_tilde/sc.dust2_tilde.cpp)
-#define ALGO_FLIPNOISE 5
-#define ALGO_RANDGATE 6
-#define ALGO_GATEDELAY 7
-#define ALGO_COMPARE 8
-#define ALGO_RYTHMQUANT 9
-#define ALGO_CVRECORDER 10
-#define ALGO_TURING 11
-#define ALGO_BURST 12
-#define ALGO_CRACKLE 13  // Based on SuperCollider for max sc.crackle~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.crackle_tilde/sc.crackle_tilde.cpp)
-#define ALGO_CALIB 14
+#define ALGO_SHTH 0         // S&H or T&H (from input or random)
+#define ALGO_TURING 1       // TURING MACHINE (from input or random)
+#define ALGO_CVRECORDER 2   // CV RECORDER (from input + min)
+#define ALGO_PERLIN 3       // PERLIN NOISE - Based on PerlinNoise.ino @author Adam Wonak (https://github.com/awonak/HagiwoModulove/blob/main/SyncLFO/PerlinNoise/PerlinNoise.ino)
+#define ALGO_BROWNIAN 4     // BROWNIAN NOISE 
+#define ALGO_LORENZ 5       // LORENZ ATTRACTOR Chaotic oscillator
+#define ALGO_DUST 6         // DUST NOISE - Based on SuperCollider for max sc.dust2~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.dust2_tilde/sc.dust2_tilde.cpp)
+#define ALGO_FLIPNOISE 7    // FLIP NOISE
+#define ALGO_RANDGATE 8     // RANDOM GATES
+#define ALGO_GATEDELAY 9    // GATE DELAY & TRIG to GATE
+#define ALGO_RYTHMQUANT 10  // RYTHM QUANTIZER (clock in hold quantizes triggers on input)
+#define ALGO_BURST 11       // BURST GENERATOR (CLOCK DIV/MULT)
+#define ALGO_CRACKLE 12     // CRACKLE NOISE - Based on SuperCollider for max sc.crackle~ (https://github.com/sbl/sc-max/blob/master/source/projects/sc.crackle_tilde/sc.crackle_tilde.cpp)
+#define ALGO_COMPARE 13     // COMPARATOR (min < input < max)
+#define ALGO_CALIB 14       // CALIBRATION (octave + semitones)
 
 #include "utils.h"
 #include "algos.h"
